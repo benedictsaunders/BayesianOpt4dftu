@@ -16,6 +16,9 @@ from pymatgen.core.lattice import Lattice
 from pymatgen.core.structure import Structure, Molecule
 from pymatgen.io.vasp.outputs import BSVasprun, Vasprun
 
+from pymatgen.core import Structure
+from pymatgen.symmetry.bandstructure import HighSymmKpath
+
 from bayes_opt import UtilityFunction
 from bayes_opt import BayesianOptimization
 from string import ascii_lowercase
@@ -55,6 +58,15 @@ class vasp_init(object):
             d.writelines(poscar)
             d.close()
 
+
+    def auto_kpoints(self, poscar, divisions = 40) -> None:
+        struct = Structure.from_file(poscar)
+        kpath = HighSymmKpath(struct)
+        kpts = Kpoints.automatic_linemode(divisions=divisions, ibz=kpath)
+        kpts.write_file("KPOINTS_nsc")
+
+
+    
     def kpt4pbeband(self, path, import_kpath):
         if import_kpath:
             special_kpoints = kpath_dict
@@ -119,6 +131,7 @@ class vasp_init(object):
         if step == 'scf':
             if xc == 'pbe':
                 flags.update(self.input_dict[xc])
+            
             calc = Vasp(self.atoms, directory=directory,
                             kpts=self.struct_info['kgrid_'+xc], gamma=True, **flags)
             calc.write_input(self.atoms)
